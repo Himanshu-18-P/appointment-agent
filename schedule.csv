@@ -1,0 +1,10 @@
+date,time,is_booked,patient_name
+2025-08-19,09:00 AM,False,
+2025-08-19,09:30 AM,False,
+2025-08-19,10:00 AM,True,Himashu
+2025-08-19,10:30 AM,False,
+2025-08-19,11:00 AM,False,
+2025-08-20,10:00 AM,True,hsp
+2025-08-20,10:30 AM,True,Bob
+2025-08-20,11:00 AM,False,
+2025-08-20,11:30 AM,False,
