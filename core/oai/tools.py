@@ -1,14 +1,8 @@
-from langchain.agents import initialize_agent, AgentType
 from langchain.tools import tool
 import pandas as pd
 import dateparser
-from langchain_openai import ChatOpenAI
-from langchain.memory import ConversationBufferMemory
-from langchain.prompts import MessagesPlaceholder
-from langchain.schema import SystemMessage
 from dotenv import load_dotenv
-import os
-from langchain_groq import ChatGroq
+
 
 load_dotenv()
 
@@ -142,64 +136,8 @@ def get_datetime_tool(text: str) -> str:
         return "❌ Could not understand the datetime. Please rephrase."
     return dt.strftime("%Y-%m-%d %I:%M %p")
 
-# ----------- LLM Setup ------------
-memory = ConversationBufferMemory(
-    memory_key="chat_history",
-    return_messages=True , 
-    k=6
-)
-
-llm = ChatOpenAI(
-    temperature=0,
-    model="gpt-4" ,
-    api_key=os.getenv("OPENAI_API_KEY")
-)
-
-# llm = ChatGroq(
-#     model="qwen/qwen3-32b",
-#     temperature=0,
-#     api_key= os.getenv("GRoq_API_KEY")
-# )
-
-# ----------- Agent Setup ------------
 tools = [check_availability_tool, book_appointment_tool, list_free_slots_tool, get_datetime_tool]
-
-agent = initialize_agent(
-    tools=tools,
-    llm=llm,
-    agent=AgentType.OPENAI_FUNCTIONS,
-    verbose=True,
-    memory=memory,
-    agent_kwargs={
-        "system_message": SystemMessage(
-            content=(
-                "You are DoctorBot, an assistant that helps users schedule appointments using available tools. "
-                "Remember prior inputs like dates and names across the conversation. "
-                "Always ensure time includes AM or PM. "
-                "If the user provides vague input like '9:00', ask them to specify AM or PM, or use get_datetime_tool. "
-                "If the user answers with a short confirmation like 'yes' or repeats only a date/time, "
-                "infer missing arguments from chat_history and proceed."
-            )
-        ),
-        "extra_prompt_messages": [MessagesPlaceholder(variable_name="chat_history")],
-    },
-)
-
 
 
 if __name__ == '__main__':
-    # ----------- Chat Loop ------------
-    print("\n🤖 DoctorBot is ready! Ask me about appointments. Type 'exit' to quit.\n")
-
-    while True:
-        user_input = input("👤 You: ")
-        if user_input.strip().lower() in ['exit', 'quit']:
-            print("👋 Exiting... Have a great day!")
-            break
-        try:
-            response = agent.invoke({"input": user_input})
-            print(f"🤖 Bot: {response['output']}\n")
-        except ValueError as ve:
-            print(f"🤖 Bot: {str(ve)}\n")
-        except Exception as e:
-            print(f"⚠️ Error: {e}\n")
+    print('done')

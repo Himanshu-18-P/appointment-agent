@@ -1,0 +1,15 @@
+# Core backend
+fastapi
+uvicorn[standard]
+pandas
+python-multipart
+python-dotenv
+dateparser
+
+# LLM tooling
+langchain
+langchain-openai
+langchain-groq
+
+# Optional for Streamlit frontend
+streamlit
