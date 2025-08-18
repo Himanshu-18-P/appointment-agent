@@ -89,7 +89,7 @@ def chat_with_bot(bot_name: str, user_message: UserMessage):
     with open(config_path, "r") as f:
         config = json.load(f)
 
-    response = processapi._process_text.process(folder_path,user_message.message , config.get('system_prompt') ,  config.get('api_key'))
+    response = processapi._process_text.process(bot_name,user_message.message , config.get('system_prompt') ,  config.get('api_key'))
 
     return {
         "bot_reply": response

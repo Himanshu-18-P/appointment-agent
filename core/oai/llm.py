@@ -1,4 +1,4 @@
-from core.oai.tools import tools  # Make sure `tools` uses the correct folder context
+from core.oai.tools import *  # Make sure `tools` uses the correct folder context
 from langchain_openai import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.prompts import MessagesPlaceholder
@@ -33,7 +33,7 @@ class ProcessInputText:
 
 
         agent = initialize_agent(
-            tools=tools, 
+            tools=tools(bot_name), 
             llm=llm,
             agent=AgentType.OPENAI_FUNCTIONS,
             verbose=True,
