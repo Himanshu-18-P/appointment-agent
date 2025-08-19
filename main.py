@@ -11,7 +11,7 @@ app = FastAPI()
 BASE_DIR = "bots_data"
 processapi = ProcessApi()
 
-
+ 
 class BotInitRequest(BaseModel):
     bot_name: str
     greeting: str = "👋 Hello! I'm your assistant."
