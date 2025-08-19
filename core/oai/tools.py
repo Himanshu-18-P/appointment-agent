@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from core.utils.vectordb import *
 from datetime import datetime
 
+# we need to add human in the loop 
 
 load_dotenv()
 indexers = {}

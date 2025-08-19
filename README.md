@@ -1,6 +1,6 @@
 # appointment-agent
 
-A no-code, API-first system to deploy intelligent doctor appointment assistants powered by LLMs.
+A no-code, API-first system to deploy intelligent appointment assistants powered by LLMs.
 
 Each bot supports:
 
