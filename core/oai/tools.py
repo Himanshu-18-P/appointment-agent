@@ -3,8 +3,12 @@ import pandas as pd
 import dateparser
 import os
 from dotenv import load_dotenv
+from core.utils.vectordb import *
+from datetime import datetime
+
 
 load_dotenv()
+indexers = {}
 
 def normalize_date(date_str: str) -> str:
     """
@@ -108,6 +112,7 @@ def tools(bot_name: str):
     def list_free_slots(date: str) -> str:
         """
         List all free appointment slots on a given date.
+        For today's date, only show future slots (time > now).
 
         Args:
             date (str): Natural or formatted date string.
@@ -117,12 +122,24 @@ def tools(bot_name: str):
         """
         df = pd.read_csv(schedule_path)
         date = normalize_date(date)
-        free_slots = df[(df["date"] == date) & (df["is_booked"] == False)]
 
-        if free_slots.empty:
+        # Filter only unbooked slots for the given date
+        filtered_df = df[(df["date"] == date) & (df["is_booked"] == False)]
+
+        if date == datetime.now().strftime("%Y-%m-%d"):
+            now = datetime.now()
+            def is_future_time(t):
+                try:
+                    return datetime.strptime(t, "%I:%M %p").time() > now.time()
+                except:
+                    return False
+
+            filtered_df = filtered_df[filtered_df["time"].apply(is_future_time)]
+
+        if filtered_df.empty:
             return "No free slots available on that date."
 
-        return "\n".join(f"{row['time']}" for _, row in free_slots.iterrows())
+        return "\n".join(f"{row['time']}" for _, row in filtered_df.iterrows())
 
     def get_datetime(text: str) -> str:
         """
@@ -145,7 +162,7 @@ def tools(bot_name: str):
     @tool
     def book_appointment_tool(date: str, time: str, patient_name: str) -> str:
         """
-        Tool: Book an appointment slot for a given date and time with a patient name.
+        Tool: Book an appointment slot for a given date and time with a patient name , ask for name.
         Requires unbooked slot and patient identifier.
         """
         return book_appointment(date, time, patient_name)
@@ -173,6 +190,23 @@ def tools(bot_name: str):
         However, rescheduling is currently not supported in this system.
         """
         return  f"⚠️ Sorry, {patient_name}, we currently do not support rescheduling appointments or cancel. "
+    
+
+    @tool
+    def context_tool(bot_name: str, user_text: str) -> str:
+        """
+        Tool: Retrieves the top 5 most relevant context passages 
+        for a given query (`user_text`) using the vector store specific to the bot (`bot_name`). 
+        Helps the agent answer user queries based on the uploaded PDF content.
+        """
+        if bot_name not in indexers:
+            indexers[bot_name] = PDFIndexer()
+
+        index_dir = os.path.join("vector_store", bot_name)
+        results = indexers[bot_name].get_top_k_results(index_dir, user_text)
+        print(results)
+        return results[0]['text']
+
 
 
     return [
@@ -180,7 +214,8 @@ def tools(bot_name: str):
         book_appointment_tool,
         list_free_slots_tool,
         get_datetime_tool , 
-        reschedule_appointment_tool
+        reschedule_appointment_tool , 
+        context_tool
     ]
 
 

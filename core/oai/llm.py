@@ -21,16 +21,16 @@ class ProcessInputText:
 
         memory = ConversationBufferMemory(
             memory_key="chat_history",
-            return_messages=True,
-            k=6
-        )
+            return_messages=True
+            )
 
         llm = ChatOpenAI(
             temperature=0,
             model="gpt-4",
             api_key=api_key
         )
-
+       
+        print(bot_name)
 
         agent = initialize_agent(
             tools=tools(bot_name), 
@@ -41,7 +41,7 @@ class ProcessInputText:
             agent_kwargs={
                 "system_message": SystemMessage(
                     content=(
-                        system_prompt
+                        system_prompt + f"\n\n[please use this as BotName: {bot_name}]"
                     )
                 ),
                 "extra_prompt_messages": [MessagesPlaceholder(variable_name="chat_history")],

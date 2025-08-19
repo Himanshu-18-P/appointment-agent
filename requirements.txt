@@ -5,11 +5,16 @@ pandas
 python-multipart
 python-dotenv
 dateparser
+pypdf
 
 # LLM tooling
 langchain
 langchain-openai
 langchain-groq
+sentence-transformers
+langchain_huggingface 
+faiss-cpu
+rank_bm25
 
 # Optional for Streamlit frontend
 streamlit

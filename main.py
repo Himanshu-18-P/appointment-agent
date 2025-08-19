@@ -30,9 +30,10 @@ def create_bot(bot_data: BotInitRequest):
     if os.path.exists(folder):
         raise HTTPException(status_code=400, detail="Bot already exists.")
     
+    final_prompt = bot_data.system_prompt.strip() + "\n\n" + BASE_SYSTEM_PROMPT.strip()
     meta = {
         "greeting": bot_data.greeting,
-        "system_prompt": bot_data.system_prompt ,
+        "system_prompt": final_prompt ,
         "api_key" : bot_data.api_key
     }
 
@@ -55,6 +56,22 @@ def upload_schedule(bot_name: str, file: UploadFile = File(...)):
     df.to_csv(processapi._handle_data.get_schedule_path(bot_name), index=False)
     return {"message": f"Schedule updated for bot '{bot_name}'."}
 
+@app.post("/bots/{bot_name}/upload_context_pdf")
+def upload_context_pdf(bot_name: str, file: UploadFile = File(...)):
+    folder = processapi._handle_data.get_bot_folder(bot_name)
+    if not os.path.exists(folder):
+        raise HTTPException(status_code=404, detail="Bot does not exist.")
+
+    # Save uploaded file
+    pdf_path = os.path.join(folder, "context.pdf")
+    with open(pdf_path, "wb") as f:
+        f.write(file.file.read())
+
+    res = processapi.create_bot(bot_name , pdf_path , True)
+
+    return {"message": f"Context PDF uploaded for bot '{bot_name}'."}
+
+
 
 @app.get("/bots/{bot_name}/start")
 def start_bot(bot_name: str):
@@ -62,7 +79,7 @@ def start_bot(bot_name: str):
     if not os.path.exists(meta_path):
         raise HTTPException(status_code=404, detail="Bot not found.")
 
-    with open(meta_path, "r") as f:
+    with open(meta_path, "r" , encoding="utf-8") as f:
         meta = json.load(f)
 
     greeting = meta.get("greeting", "👋 Hello! I'm your assistant.")
@@ -86,7 +103,7 @@ def chat_with_bot(bot_name: str, user_message: UserMessage):
         raise HTTPException(status_code=404, detail="Bot configuration or schedule not found.")
 
     # Load prompt & initial message
-    with open(config_path, "r") as f:
+    with open(config_path, "r" , encoding="utf-8") as f:
         config = json.load(f)
 
     response = processapi._process_text.process(bot_name,user_message.message , config.get('system_prompt') ,  config.get('api_key'))
@@ -97,4 +114,4 @@ def chat_with_bot(bot_name: str, user_message: UserMessage):
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", port=8838, reload=True) # https://api.indiagategrainsofhope.com/ 8838
+    uvicorn.run("main:app", port=8838, reload=True)

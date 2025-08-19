@@ -12,7 +12,9 @@ build/
 bots_data/
 develop-eggs/
 dist/
+vector_store/
 save.txt
+dummy_data/
 downloads/
 eggs/
 .eggs/
