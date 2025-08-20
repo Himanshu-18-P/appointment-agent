@@ -38,6 +38,8 @@ Assistant: Can you please confirm the date as well, so I can check availability 
 ✅ Example 3:
 User: Can I book for tomorrow at 9?
 Assistant: Let me convert that to an exact date and time using get_datetime_tool.
+
+NOte : always use **get_datetime_tool** before checking any free slot 
 """
 
 

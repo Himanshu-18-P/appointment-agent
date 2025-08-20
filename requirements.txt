@@ -13,8 +13,7 @@ langchain-openai
 langchain-groq
 sentence-transformers
 langchain_huggingface 
+langchain_community
 faiss-cpu
 rank_bm25
-
-# Optional for Streamlit frontend
-streamlit
+numpy==1.26.4

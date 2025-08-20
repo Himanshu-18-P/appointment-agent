@@ -1,0 +1,35 @@
+# Python cache & compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.env/
+.venv/
+venv/
+ENV/
+
+# Environment & config files
+*.env
+*.env.*
+.envrc
+
+# Project specific folders
+vector_store/
+bots_data/
+dummy_data/
+
+# IDE & OS specific
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
