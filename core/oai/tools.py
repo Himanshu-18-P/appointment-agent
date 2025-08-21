@@ -207,6 +207,22 @@ def tools(bot_name: str):
         results = indexers[bot_name].get_top_k_results(index_dir, user_text)
         print(results)
         return results[0]['text']
+    
+
+    @tool
+    def escalate_to_human_tool(user_message: str, reason: str = "Unclear or unsupported request") -> str:
+        """
+        Tool: Escalates the conversation to a human support team using a Google Form.
+        Provides the user with a form link to submit their query and contact details.
+        """
+        form_link = "https://docs.google.com/forms/d/e/1FAIpQLSc1GtlzeEKRVhLDg9nbJN25ulC7BxytYSCJvvW5uyT3axN5Ug/viewform?usp=sharing"
+
+        return (
+            "📨 It looks like we need a human to help you further.\n"
+            f"Please submit your request using this form:\n👉 {form_link}\n\n"
+            "Include details like your name, contact info, and what you need help with."
+        )
+
 
 
 
@@ -216,7 +232,8 @@ def tools(bot_name: str):
         list_free_slots_tool,
         get_datetime_tool , 
         reschedule_appointment_tool , 
-        context_tool
+        context_tool , 
+        escalate_to_human_tool
     ]
 
 

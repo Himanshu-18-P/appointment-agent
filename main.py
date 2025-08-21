@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException , Form
 from pydantic import BaseModel
 import pandas as pd
 import os, json
@@ -6,10 +6,24 @@ import uvicorn
 from typing import Optional
 from langchain.schema import AIMessage
 from core import *
+import uuid
+from fastapi.middleware.cors import CORSMiddleware
+import re
+
 
 app = FastAPI()
 BASE_DIR = "bots_data"
 processapi = ProcessApi()
+
+
+# Allow all origins (NOT recommended for production)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],            # Allow all origins
+    allow_credentials=True,
+    allow_methods=["*"],            # Allow all HTTP methods (GET, POST, etc.)
+    allow_headers=["*"],            # Allow all headers (Authorization, Content-Type, etc.)
+)
 
  
 class BotInitRequest(BaseModel):
@@ -20,6 +34,12 @@ class BotInitRequest(BaseModel):
 
 class UserMessage(BaseModel):
     message: str
+    bot_name: str
+
+
+def slugify(text: str) -> str:
+    # Convert spaces and special chars into safe dashes/underscores
+    return re.sub(r'[^a-zA-Z0-9_-]', '-', text.strip().lower())
 
 
 @app.get('/')
@@ -30,29 +50,40 @@ def index():
 @app.post("/bots/create")
 def create_bot(bot_data: BotInitRequest):
     try:
-        folder = processapi._handle_data.get_bot_folder(bot_data.bot_name)
-        
+        # Create a unique ID
+        safe_name = slugify(bot_data.bot_name)
+        unique_id = str(uuid.uuid4())[:8]   # short UUID for uniqueness
+        bot_id = f"{safe_name}-{unique_id}"
+
+        # Folder for this bot
+        folder = processapi._handle_data.get_bot_folder(bot_id)
+
         if os.path.exists(folder):
             raise HTTPException(status_code=400, detail="Bot already exists.")
-        
+
         final_prompt = bot_data.system_prompt.strip() + "\n\n" + BASE_SYSTEM_PROMPT.strip()
         meta = {
             "greeting": bot_data.greeting,
             "system_prompt": final_prompt,
-            "api_key": bot_data.api_key
+            "api_key": bot_data.api_key,
+            "bot_name": bot_data.bot_name,
+            "bot_id": bot_id
         }
 
-        processapi._handle_data.savejson(bot_data.bot_name, meta)
+        processapi._handle_data.savejson(bot_id, meta)
 
-        return {"message": f"Bot '{bot_data.bot_name}' created."}
+        return {"message": bot_data.bot_name, "bot_id": bot_id}
 
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-
-@app.post("/bots/{bot_name}/upload_schedule")
-def upload_schedule(bot_name: str, file: UploadFile = File(...)):
+    
+@app.post("/bots/upload_schedule")
+def upload_schedule(
+    bot_name: str = Form(...),
+    file: UploadFile = File(...)
+):
     try:
         folder = processapi._handle_data.get_bot_folder(bot_name)
         if not os.path.exists(folder):
@@ -65,25 +96,29 @@ def upload_schedule(bot_name: str, file: UploadFile = File(...)):
 
         df.to_csv(processapi._handle_data.get_schedule_path(bot_name), index=False)
         return {"message": f"Schedule updated for bot '{bot_name}'."}
-    
+
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
-@app.post("/bots/{bot_name}/upload_context_pdf")
-def upload_context_pdf(bot_name: str, file: UploadFile = File(...)):
+
+
+@app.post("/bots/upload_context_pdf")
+def upload_context_pdf(
+    bot_name: str = Form(...),
+    file: UploadFile = File(...)
+):
     try:
         folder = processapi._handle_data.get_bot_folder(bot_name)
         if not os.path.exists(folder):
             raise HTTPException(status_code=404, detail="Bot does not exist.")
 
-        # Save uploaded file
         pdf_path = os.path.join(folder, "context.pdf")
         with open(pdf_path, "wb") as f:
             f.write(file.file.read())
 
-        res = processapi.create_bot(bot_name , pdf_path , True)
+        res = processapi.create_bot(bot_name, pdf_path, True)
 
         return {"message": f"Context PDF uploaded for bot '{bot_name}'."}
 
@@ -122,10 +157,10 @@ def start_bot(bot_name: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
-@app.post("/bots/{bot_name}/chat")
-def chat_with_bot(bot_name: str, user_message: UserMessage):
+@app.post("/bots/chat")
+def chat_with_bot(user_message: UserMessage):
     try:
-        folder_path = os.path.join(BASE_DIR, bot_name)
+        folder_path = os.path.join(BASE_DIR, user_message.bot_name)
         config_path = os.path.join(folder_path, "meta.json")
         schedule_path = os.path.join(folder_path, "schedule.csv")
 
@@ -136,7 +171,7 @@ def chat_with_bot(bot_name: str, user_message: UserMessage):
         with open(config_path, "r" , encoding="utf-8") as f:
             config = json.load(f)
 
-        response = processapi._process_text.process(bot_name,user_message.message , config.get('system_prompt') ,  config.get('api_key'))
+        response = processapi._process_text.process(user_message.bot_name,user_message.message , config.get('system_prompt') ,  config.get('api_key'))
 
         return {
             "bot_reply": response
@@ -149,4 +184,4 @@ def chat_with_bot(bot_name: str, user_message: UserMessage):
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", port=8838, reload=True)
+    uvicorn.run("main:app", port=8838,host='0.0.0.0' , reload=True)
