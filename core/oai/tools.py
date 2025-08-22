@@ -205,7 +205,6 @@ def tools(bot_name: str):
 
         index_dir = os.path.join("vector_store", bot_name)
         results = indexers[bot_name].get_top_k_results(index_dir, user_text)
-        print(results)
         return results[0]['text']
     
 

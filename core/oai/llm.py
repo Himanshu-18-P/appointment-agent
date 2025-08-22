@@ -30,7 +30,6 @@ class ProcessInputText:
             api_key=api_key
         )
        
-        print(bot_name)
 
         agent = initialize_agent(
             tools=tools(bot_name), 
