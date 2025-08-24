@@ -97,6 +97,14 @@ def tools(bot_name: str):
         df = pd.read_csv(schedule_path)
         date = normalize_date(date)
         time = normalize_time(time)
+        # Just compare directly with today's date
+        today = datetime.now().strftime("%Y-%m-%d")
+        if date < today:
+            return (
+                f"The date '{date}' is in the past. "
+                "Please use get_datetime_tool to clarify or or ask user for date"
+            )
+
         idx = df[(df["date"] == date) & (df["time"] == time)].index
 
         if len(idx) == 0:
@@ -124,6 +132,15 @@ def tools(bot_name: str):
         df = pd.read_csv(schedule_path)
         date = normalize_date(date)
 
+        # Just compare directly with today's date
+        today = datetime.now().strftime("%Y-%m-%d")
+        if date < today:
+            return (
+                f"The date '{date}' is in the past. "
+                "Please use get_datetime_tool to clarify or correct the date."
+            )
+
+
         # Filter only unbooked slots for the given date
         filtered_df = df[(df["date"] == date) & (df["is_booked"] == False)]
 
@@ -144,12 +161,23 @@ def tools(bot_name: str):
 
     def get_datetime(text: str) -> str:
         """
-        Parse a natural language string into a full datetime.
+        Convert natural language into datetime.
+        Returns full datetime if time is mentioned,
+        otherwise just the date.
         """
         dt = dateparser.parse(text, settings={"PREFER_DATES_FROM": "future"})
         if not dt:
             return "❌ Could not understand the datetime. Please rephrase."
-        return dt.strftime("%Y-%m-%d %I:%M %p")
+
+        # Heuristic: look for time indicators in the input
+        time_indicators = ["am", "pm", "a.m.", "p.m.", ":", "o'clock"]
+        has_time = any(t in text.lower() for t in time_indicators)
+
+        if has_time:
+            return dt.strftime("%Y-%m-%d %I:%M %p")  # full datetime
+        else:
+            return dt.strftime("%Y-%m-%d")  # just date
+
 
     # LangChain @tool wrappers
     @tool

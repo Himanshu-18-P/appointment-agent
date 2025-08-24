@@ -21,8 +21,8 @@ class ProcessInputText:
 
         memory = ConversationBufferMemory(
             memory_key="chat_history",
-            return_messages=True
-            )
+            return_messages=True ,
+            output_key="output" , k = 10)
 
         llm = ChatOpenAI(
             temperature=0,
@@ -55,8 +55,24 @@ class ProcessInputText:
         """
         Process user input using the agent specific to the given bot_name.
         """
+        print('*'*10)
+        print(self.memories[bot_name])
+        print('*'*10)
         agent = self.get_or_create_agent(bot_name , system_prompt , api_key )
         return agent.invoke({"input": user_input})["output"]
+    
+    def process_stream(self, bot_name: str, user_input: str, system_prompt: str, api_key: str):
+        """
+        Stream the agent's reasoning steps and final output for the given bot_name.
+        Yields chunks suitable for SSE/WebSocket or console output.
+        """
+        agent = self.get_or_create_agent(bot_name, system_prompt, api_key)
+        
+        for step in agent.stream({"input": user_input}):
+            # `step` is a dict that can include "thought", "tool", "tool_input", etc.
+            # Yield each step as a JSON-serializable dict or formatted text
+            yield step
+
 
 if __name__ == '__main__':
     print('done')

@@ -9,6 +9,8 @@ from core import *
 import uuid
 from fastapi.middleware.cors import CORSMiddleware
 import re
+from fastapi.responses import StreamingResponse
+import json
 
 
 app = FastAPI()
@@ -29,7 +31,6 @@ app.add_middleware(
 class BotInitRequest(BaseModel):
     bot_name: str
     greeting: str = "👋 Hello! I'm your assistant."
-    system_prompt: str = "You are a helpful assistant for scheduling doctor appointments."
     api_key: Optional[str] = None
 
 class UserMessage(BaseModel):
@@ -61,7 +62,7 @@ def create_bot(bot_data: BotInitRequest):
         if os.path.exists(folder):
             raise HTTPException(status_code=400, detail="Bot already exists.")
 
-        final_prompt = bot_data.system_prompt.strip() + "\n\n" + BASE_SYSTEM_PROMPT.strip()
+        final_prompt = BASE_SYSTEM_PROMPT.strip()
         meta = {
             "greeting": bot_data.greeting,
             "system_prompt": final_prompt,
@@ -140,7 +141,7 @@ def start_bot(bot_name: str):
             meta = json.load(f)
 
         greeting = meta.get("greeting", "👋 Hello! I'm your assistant.")
-        system_prompt = meta.get("system_prompt", "You are a helpful assistant.")
+        system_prompt = BASE_SYSTEM_PROMPT
         api_key = meta.get("api_key")  or os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise HTTPException(status_code=500, detail="No API key provided or found in environment.")
@@ -181,6 +182,67 @@ def chat_with_bot(user_message: UserMessage):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    
+
+
+@app.post("/bots/stream")
+def chat_with_bot_stream(user_message: UserMessage):
+    try:
+        folder_path = os.path.join(BASE_DIR, user_message.bot_name)
+        config_path = os.path.join(folder_path, "meta.json")
+        schedule_path = os.path.join(folder_path, "schedule.csv")
+
+        if not os.path.exists(config_path) or not os.path.exists(schedule_path):
+            raise HTTPException(status_code=404, detail="Bot configuration or schedule not found.")
+
+        # Load prompt & initial message
+        with open(config_path, "r", encoding="utf-8") as f:
+            config = json.load(f)
+
+        def event_stream():
+            try:
+                for step in processapi._process_text.process_stream(
+                    user_message.bot_name,
+                    user_message.message,
+                    config.get("system_prompt"),
+                    config.get("api_key")
+                ):
+                    # Final Output
+                    if "output" in step:
+                        yield f"data: {json.dumps({'type': 'final', 'output': step['output']})}\n\n"
+
+                    # Intermediate Reasoning + Tool Use
+                    elif "steps" in step:
+                        # Handle agent step — extract useful info
+                        try:
+                            action = step["steps"][0].action  # this is AgentActionMessageLog
+                            observation = step["steps"][0].observation
+
+                            # Create cleaned version
+                            cleaned = {
+                                "type": "tool_use",
+                                "log": action.log.strip(),
+                                "tool": action.tool,
+                                "tool_input": action.tool_input,
+                                "observation": observation
+                            }
+                            yield f"data: {json.dumps(cleaned)}\n\n"
+
+                        except Exception as e:
+                            yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+
+            except Exception as e:
+                yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+
+
+
+        return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
 
 
 if __name__ == "__main__":
